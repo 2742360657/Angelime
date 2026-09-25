@@ -1,20 +1,9 @@
 import { PropsWithChildren, useMemo } from 'react';
-import {
-  LayoutAnimation,
-  Platform,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  UIManager,
-  View,
-} from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 
+import { LIST_LAYOUT } from '../theme/animation';
 import { useHabits } from '../state/HabitStore';
-
-// Android 需要显式开启 LayoutAnimation（官方文档要求）。
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
 
 type AccordionSectionProps = {
   title: string;
@@ -29,9 +18,10 @@ type AccordionSectionProps = {
 /**
  * 可折叠分组。
  *
- * 折叠动画用 React Native 内置的 LayoutAnimation：
- * 它专门用于「视图层级或尺寸发生变化」的场景，会在下一次布局时自动插入过渡，
- * 不需要手动测量内容高度，因此不会出现「测量到 0 后内容再也显示不出来」的问题。
+ * 折叠动画与列表条目统一使用 Reanimated 的 LinearTransition：
+ * 内容挂载/卸载时由布局动画负责尺寸过渡，避免同时使用 RN 的 LayoutAnimation
+ * 与 Reanimated 两套系统造成「外层瞬间跳变、内层缓慢移动」的不一致观感。
+ * 不手动测量高度，因此不会出现「测量到 0 后内容再也显示不出来」的问题。
  */
 export function AccordionSection({
   title,
@@ -45,23 +35,13 @@ export function AccordionSection({
   const { theme } = useHabits();
   const styles = useMemo(() => createStyles(theme), [theme]);
 
-  const handleToggle = () => {
-    LayoutAnimation.configureNext({
-      duration: 220,
-      create: { type: 'easeInEaseOut', property: 'opacity' },
-      update: { type: 'easeInEaseOut' },
-      delete: { type: 'easeInEaseOut', property: 'opacity' },
-    });
-    onToggle();
-  };
-
   return (
     <View style={styles.section}>
       <TouchableOpacity
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel ?? `折叠${title}`}
         accessibilityState={{ expanded: !collapsed }}
-        onPress={handleToggle}
+        onPress={onToggle}
         style={styles.header}
       >
         <Text style={[styles.title, danger && styles.dangerTitle]}>{title}</Text>
@@ -71,7 +51,12 @@ export function AccordionSection({
         </View>
       </TouchableOpacity>
 
-      {collapsed ? null : <View style={styles.body}>{children}</View>}
+      {/* 与列表条目同一套布局动画：展开/收起时内容平滑生长收缩，不再瞬间跳变。 */}
+      {collapsed ? null : (
+        <Animated.View layout={LIST_LAYOUT} style={styles.body}>
+          {children}
+        </Animated.View>
+      )}
     </View>
   );
 }

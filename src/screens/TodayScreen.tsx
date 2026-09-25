@@ -1,5 +1,8 @@
 import { useCallback, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import Animated from 'react-native-reanimated';
+
+import { LIST_LAYOUT } from '../theme/animation';
 
 import { AccordionSection } from '../components/AccordionSection';
 import { CheckinDetailModal } from '../components/CheckinDetailModal';
@@ -278,11 +281,11 @@ export function TodayScreen() {
                 collapsed={collapsed.has(bucket.id)}
                 onToggle={() => toggleBucket(bucket.id)}
               >
-                <View style={styles.list}>
+                <Animated.View layout={LIST_LAYOUT} style={styles.list}>
                   {bucket.todos.map((todo) => (
                     <TodoRow key={todo.id} todo={todo} onToggle={handleToggleTodo} onPress={openEditor} onLongPress={() => setTodoSelectMode(true)} compact />
                   ))}
-                </View>
+                </Animated.View>
               </AccordionSection>
             ))}
             {noDateTodos.length > 0 ? (
@@ -292,11 +295,11 @@ export function TodayScreen() {
                 collapsed={collapsed.has('no-date')}
                 onToggle={() => toggleBucket('no-date')}
               >
-                <View style={styles.list}>
+                <Animated.View layout={LIST_LAYOUT} style={styles.list}>
                   {noDateTodos.slice(0, 3).map((todo) => (
                     <TodoRow key={todo.id} todo={todo} onToggle={handleToggleTodo} onPress={openEditor} onLongPress={() => setTodoSelectMode(true)} compact />
                   ))}
-                </View>
+                </Animated.View>
               </AccordionSection>
             ) : null}
             {todayTodoIds.length === 0 ? <Text style={styles.emptyText}>今天暂无待办</Text> : null}
@@ -314,7 +317,7 @@ export function TodayScreen() {
                 <Text style={styles.emptyTitle}>还没有习惯</Text>
               </View>
             ) : (
-              <View style={styles.list}>
+              <Animated.View layout={LIST_LAYOUT} style={styles.list}>
                 {orderedHabits.map((habit) => (
                   <HabitCard
                     key={habit.id}
@@ -328,7 +331,7 @@ export function TodayScreen() {
                     }}
                   />
                 ))}
-              </View>
+              </Animated.View>
             )}
           </AccordionSection>
         </ScrollView>

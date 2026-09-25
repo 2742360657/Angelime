@@ -1,5 +1,8 @@
 import { useCallback, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import Animated from 'react-native-reanimated';
+
+import { LIST_LAYOUT } from '../theme/animation';
 
 import { AccordionSection } from '../components/AccordionSection';
 import { MultiSelectBoard, SelectCircle } from '../components/MultiSelectBoard';
@@ -186,7 +189,7 @@ export function TasksScreen() {
                 collapsed={collapsed.has(bucket.id)}
                 onToggle={() => toggleBucket(bucket.id)}
               >
-                <View style={styles.list}>
+                <Animated.View layout={LIST_LAYOUT} style={styles.list}>
                   {bucket.todos.map((todo) => (
                     <TodoRow
                       key={todo.id}
@@ -196,7 +199,7 @@ export function TasksScreen() {
                       onLongPress={() => setSelectMode(true)}
                     />
                   ))}
-                </View>
+                </Animated.View>
               </AccordionSection>
             ))
           )}
@@ -208,7 +211,7 @@ export function TasksScreen() {
               collapsed={collapsed.has(TODO_COMPLETED_BUCKET_ID)}
               onToggle={() => toggleBucket(TODO_COMPLETED_BUCKET_ID)}
             >
-              <View style={styles.list}>
+              <Animated.View layout={LIST_LAYOUT} style={styles.list}>
                 {completedTodos.map((todo) => (
                   <TodoRow
                     key={todo.id}
@@ -218,7 +221,7 @@ export function TasksScreen() {
                     onLongPress={() => setSelectMode(true)}
                   />
                 ))}
-              </View>
+              </Animated.View>
             </AccordionSection>
           ) : null}
         </ScrollView>

@@ -228,7 +228,7 @@ export function MemosScreen() {
               <Text style={styles.emptyHint}>点右下角 + 新建，可以写标题和正文。</Text>
             </View>
           ) : (
-            <View style={styles.list}>
+            <Animated.View layout={LIST_LAYOUT} style={styles.list}>
               {list.map((memo) => (
                 <Animated.View
                   key={memo.id}
@@ -256,7 +256,7 @@ export function MemosScreen() {
                 </TouchableOpacity>
                 </Animated.View>
               ))}
-            </View>
+            </Animated.View>
           )}
         </ScrollView>
 

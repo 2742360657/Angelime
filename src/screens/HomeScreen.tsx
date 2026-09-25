@@ -1,5 +1,8 @@
 import { useCallback, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import Animated from 'react-native-reanimated';
+
+import { LIST_LAYOUT } from '../theme/animation';
 
 import { AccordionSection } from '../components/AccordionSection';
 import { AddHabitModal } from '../components/AddHabitModal';
@@ -187,7 +190,7 @@ export function HomeScreen() {
                     {section.habits.length === 0 ? (
                       <Text style={styles.groupEmpty}>这个分组里还没有习惯</Text>
                     ) : (
-                      <View style={styles.habitList}>
+                      <Animated.View layout={LIST_LAYOUT} style={styles.habitList}>
                         {section.habits.map((habit) => (
                           <HabitCard
                             key={habit.id}
@@ -198,7 +201,7 @@ export function HomeScreen() {
                             onLongPress={() => setSelectMode(true)}
                           />
                         ))}
-                      </View>
+                      </Animated.View>
                     )}
                   </AccordionSection>
                 );
