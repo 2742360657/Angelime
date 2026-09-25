@@ -53,6 +53,8 @@ ui-*.png
 *.aab
 *.keystore
 !android/app/debug.keystore
+# 发布签名 keystore 需要随仓库保存
+!android/app/angelime-release.keystore
 
 # iOS 原生工程暂未使用
 /ios
