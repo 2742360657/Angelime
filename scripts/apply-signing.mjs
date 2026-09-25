@@ -13,15 +13,24 @@
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 
 const GRADLE_FILE = 'android/app/build.gradle';
-const KEYSTORE_FILE = 'android/app/angelime-release.keystore';
+/** 签名材料默认存放位置（仓库之外）。可用 -PANGELIME_KEYSTORE_DIR 覆盖。 */
+const KEYSTORE_DIR = process.env.ANGELIME_KEYSTORE_DIR ?? '/Ciallo/Secrets/angelime/';
 
-const RELEASE_SIGNING = `        // 正式发布签名。keystore 与口令随仓库保存（个人项目，仓库不公开）。
+const RELEASE_SIGNING = `        // 正式发布签名。
+        // keystore 与口令保存在仓库之外：优先读 ~/.gradle/gradle.properties 中的
+        // ANGELIME_KEYSTORE_DIR，未配置时回退到本机默认目录。
         // 注意：expo prebuild 会重新生成本文件，改动需用 scripts/apply-signing.mjs 重新应用。
         release {
-            storeFile file('angelime-release.keystore')
-            storePassword 'angelime2026'
-            keyAlias 'angelime'
-            keyPassword 'angelime2026'
+            def keystoreDir = project.findProperty('ANGELIME_KEYSTORE_DIR') ?: '${KEYSTORE_DIR}'
+            def keystoreProps = new Properties()
+            def keystorePropsFile = file("\${keystoreDir}keystore.properties")
+            if (keystorePropsFile.exists()) {
+                keystorePropsFile.withInputStream { keystoreProps.load(it) }
+            }
+            storeFile file("\${keystoreDir}\${keystoreProps.getProperty('storeFile', 'angelime-release.keystore')}")
+            storePassword keystoreProps.getProperty('storePassword', '')
+            keyAlias keystoreProps.getProperty('keyAlias', '')
+            keyPassword keystoreProps.getProperty('keyPassword', '')
         }
 `;
 
@@ -30,20 +39,15 @@ if (!existsSync(GRADLE_FILE)) {
   process.exit(1);
 }
 
-if (!existsSync(KEYSTORE_FILE)) {
-  console.error(`找不到 ${KEYSTORE_FILE}`);
-  console.error('请先执行：');
-  console.error(
-    "  keytool -genkeypair -v -keystore android/app/angelime-release.keystore \\\n" +
-      '    -alias angelime -keyalg RSA -keysize 2048 -validity 10000 \\\n' +
-      "    -storepass angelime2026 -keypass angelime2026 -dname 'CN=Angelime'"
-  );
+if (!existsSync(`${KEYSTORE_DIR}angelime-release.keystore`)) {
+  console.error(`找不到 ${KEYSTORE_DIR}angelime-release.keystore`);
+  console.error('请先在该目录放置 keystore 与 keystore.properties，或设置 ANGELIME_KEYSTORE_DIR 指向正确位置。');
   process.exit(1);
 }
 
 let source = readFileSync(GRADLE_FILE, 'utf8');
 
-if (source.includes("storeFile file('angelime-release.keystore')")) {
+if (source.includes("keystoreProps.getProperty('storeFile'")) {
   console.log('发布签名已配置，无需改动。');
 } else {
   const anchor = `        debug {

@@ -22,9 +22,6 @@
         "foregroundImage": "./assets/lime-icon.png"
       },
       "predictiveBackGestureEnabled": false
-    },
-    "web": {
-      "favicon": "./assets/lime-icon.png"
     }
   }
 }

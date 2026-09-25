@@ -1,7 +1,7 @@
 # 酸橙（Angelime）
 
 基于 Expo + React Native + TypeScript 的本地待办、习惯与备忘录 App。
-数据全部保存在设备本地，可导出 JSON 备份并覆盖恢复。**仅面向 Android 真机**。
+数据全部保存在设备本地，可导出 JSON 备份并覆盖恢复。**仅面向 Android 真机**（无 iOS / Web 目标）。
 
 ## 页面与交互
 
@@ -101,13 +101,27 @@ npm run build:apk             # = gradlew assembleRelease（仅 arm64-v8a）
 
 ### 发布签名
 
-`android/app/angelime-release.keystore`（别名 `angelime`）用于 release 构建，
-签名配置写在 `android/app/build.gradle`。
+keystore 与口令**存放在仓库之外**：
+
+```
+/Ciallo/Secrets/angelime/
+├── angelime-release.keystore   别名 angelime，RSA 2048，有效期 10000 天
+└── keystore.properties         storeFile / storePassword / keyAlias / keyPassword
+```
+
+`android/app/build.gradle` 的 `signingConfigs.release` 优先读取
+`~/.gradle/gradle.properties` 中的 `ANGELIME_KEYSTORE_DIR`，未配置时回退到上面的默认路径：
+
+```properties
+# ~/.gradle/gradle.properties（仅换机器时需要）
+ANGELIME_KEYSTORE_DIR=/Ciallo/Secrets/angelime/
+```
 
 > `expo prebuild` 会重新生成 `build.gradle` 覆盖签名配置，
 > 因此 prebuild 之后必须执行 `node scripts/apply-signing.mjs`（`npm run prebuild:android` 已包含）。
 
-**这个 keystore 一旦用于正式发布就不能更换，请连同口令一并备份。**
+**这个 keystore 一旦用于正式发布就不能更换，请连同口令一并异地备份。**
+证书指纹 SHA-256：`3A:8F:C2:EC:D6:FF:43:E0:B8:76:0A:0D:A1:75:4D:FC:94:8A:FC:C3:DB:A8:9F:30:30:AE:C5:11:DF:EA:AC:9A`
 
 ## 校验
 
@@ -121,7 +135,10 @@ npm run typecheck     # tsc --noEmit
 npx tsc --noEmit --noUnusedLocals --noUnusedParameters
 ```
 
+本项目没有自动化测试；每次改动后请构建 release 包并在真机确认关键流程。
+
 ## 已知限制
 
 - 左抽屉展开时，页面右下角的悬浮 `+` 会浮在遮罩之上（悬浮按钮渲染在页面内容层内）
 - 编辑类弹窗使用原生 `Modal`，其返回键由各弹窗的 `onRequestClose` 自行处理
+- 无 iOS / Web 目标：`app.json` 与代码中均已移除对应配置与分支

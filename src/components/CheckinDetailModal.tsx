@@ -1,4 +1,4 @@
-import { Alert } from '../platform/alert';
+import { Alert } from 'react-native';
 import { useMemo, useState } from 'react';
 import {
   Modal,

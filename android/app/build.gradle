@@ -104,13 +104,21 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
-        // 正式发布签名。keystore 与口令随仓库保存（个人项目，仓库不公开）。
+        // 正式发布签名。
+        // keystore 与口令保存在仓库之外：优先读 ~/.gradle/gradle.properties 中的
+        // ANGELIME_KEYSTORE_DIR，未配置时回退到本机默认目录。
         // 注意：expo prebuild 会重新生成本文件，改动需用 scripts/apply-signing.mjs 重新应用。
         release {
-            storeFile file('angelime-release.keystore')
-            storePassword 'angelime2026'
-            keyAlias 'angelime'
-            keyPassword 'angelime2026'
+            def keystoreDir = project.findProperty('ANGELIME_KEYSTORE_DIR') ?: '/Ciallo/Secrets/angelime/'
+            def keystoreProps = new Properties()
+            def keystorePropsFile = file("${keystoreDir}keystore.properties")
+            if (keystorePropsFile.exists()) {
+                keystorePropsFile.withInputStream { keystoreProps.load(it) }
+            }
+            storeFile file("${keystoreDir}${keystoreProps.getProperty('storeFile', 'angelime-release.keystore')}")
+            storePassword keystoreProps.getProperty('storePassword', '')
+            keyAlias keystoreProps.getProperty('keyAlias', '')
+            keyPassword keystoreProps.getProperty('keyPassword', '')
         }
     }
     buildTypes {

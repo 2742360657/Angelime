@@ -1,4 +1,4 @@
-import { Alert, WebAlertHost } from './src/platform/alert';
+import { Alert } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -147,7 +147,6 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <HabitProvider>
         <AppShell />
-        <WebAlertHost />
       </HabitProvider>
     </GestureHandlerRootView>
   );

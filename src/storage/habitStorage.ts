@@ -1,4 +1,3 @@
-import { Platform } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
@@ -504,10 +503,6 @@ async function ensureStorageDirectory() {
 }
 
 export async function loadAppDataFromDisk(): Promise<AppData> {
-  if (Platform.OS === 'web') {
-    const saved = localStorage.getItem('angelime-data');
-    return saved ? coerceAppData(JSON.parse(saved)) : buildDefaultAppData();
-  }
   await ensureStorageDirectory();
 
   const fileInfo = await FileSystem.getInfoAsync(DATA_FILE);
@@ -520,10 +515,6 @@ export async function loadAppDataFromDisk(): Promise<AppData> {
 }
 
 export async function saveAppDataToDisk(appData: AppData) {
-  if (Platform.OS === 'web') {
-    localStorage.setItem('angelime-data', JSON.stringify(appData));
-    return;
-  }
   await ensureStorageDirectory();
   await FileSystem.writeAsStringAsync(DATA_FILE, JSON.stringify(appData, null, 2));
 }
