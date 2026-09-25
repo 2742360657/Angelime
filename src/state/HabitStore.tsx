@@ -6,6 +6,7 @@ import {
   useEffect,
   useMemo,
   useReducer,
+  useRef,
 } from 'react';
 
 import {
@@ -23,6 +24,8 @@ import {
   HabitCadence,
   HabitGroup,
   TodoItem,
+  Memo,
+  MemoGroup,
 } from '../types/habit';
 import { clampToMinute, getTodayKey, toLocalDateKey } from '../utils/date';
 import { createId } from '../utils/id';
@@ -35,6 +38,20 @@ type HabitState = {
 };
 
 type HabitAction =
+  | { type: 'memo-add'; memo: Memo }
+  | { type: 'memo-update'; id: string; patch: Partial<Pick<Memo, 'title' | 'body' | 'groupId'>> }
+  | { type: 'memo-soft-delete'; ids: string[] }
+  | { type: 'memo-restore'; ids: string[] }
+  | { type: 'memo-purge'; ids: string[] }
+  | { type: 'memo-purge-all' }
+  | { type: 'memo-move-group'; ids: string[]; groupId: string | null }
+  | { type: 'memo-reorder'; orderedIds: string[]; groupId: string | null }
+  | { type: 'memo-group-add'; group: MemoGroup }
+  | { type: 'memo-group-rename'; groupId: string; name: string }
+  | { type: 'memo-group-delete'; groupId: string }
+  | { type: 'memo-group-reorder'; groupIds: string[] }
+  | { type: 'set-todo-bucket-collapsed'; bucketId: string; collapsed: boolean }
+  | { type: 'move-todos-to-bucket'; todoIds: string[]; dueDateKey: string | null }
   | { type: 'hydrate'; appData: AppData }
   | { type: 'set-error'; error: string | null }
   | { type: 'clear-error' }
@@ -56,6 +73,8 @@ type HabitAction =
       order: number;
     }
   | { type: 'reorder-habits'; groupId: string | null; habitIds: string[] }
+  | { type: 'move-habits-to-group'; ids: string[]; groupId: string | null }
+  | { type: 'delete-habits'; ids: string[] }
   | { type: 'archive-habit'; habitId: string }
   | { type: 'restore-archived-habit'; habitId: string }
   | { type: 'delete-habit'; habitId: string }
@@ -97,6 +116,7 @@ export type TodoInput = {
 };
 
 type HabitContextValue = HabitState & {
+  setTodoBucketCollapsed: (bucketId: string, collapsed: boolean) => void;
   allHabits: Habit[];
   habits: Habit[];
   archivedHabits: Habit[];
@@ -104,6 +124,25 @@ type HabitContextValue = HabitState & {
   todos: TodoItem[];
   settings: AppSettings;
   theme: ReturnType<typeof getTheme>;
+  memos: Memo[];
+  trashedMemos: Memo[];
+  activeMemos: Memo[];
+  memoGroups: MemoGroup[];
+  addMemo: (groupId: string | null) => string;
+  updateMemo: (id: string, patch: Partial<Pick<Memo, 'title' | 'body' | 'groupId'>>) => void;
+  trashMemos: (ids: string[]) => void;
+  restoreMemos: (ids: string[]) => void;
+  purgeMemos: (ids: string[]) => void;
+  purgeAllMemos: () => void;
+  moveMemosToGroup: (ids: string[], groupId: string | null) => void;
+  reorderMemos: (groupId: string | null, orderedIds: string[]) => void;
+  addMemoGroup: (name: string) => boolean;
+  renameMemoGroup: (groupId: string, name: string) => boolean;
+  deleteMemoGroup: (groupId: string) => void;
+  reorderMemoGroups: (groupIds: string[]) => void;
+  moveTodosToBucket: (todoIds: string[], dueDateKey: string | null) => void;
+  moveHabitsToGroup: (ids: string[], groupId: string | null) => void;
+  deleteHabits: (ids: string[]) => void;
   clearError: () => void;
   addGroup: (name: string) => boolean;
   renameGroup: (groupId: string, name: string) => boolean;
@@ -133,15 +172,18 @@ const HabitContext = createContext<HabitContextValue | null>(null);
 
 const initialState: HabitState = {
   appData: {
-      version: 5,
+      version: 7,
       habits: [],
       groups: [],
       todos: [],
+      memoGroups: [],
+      memos: [],
     settings: {
       themeId: DEFAULT_THEME_ID,
       profileName: DEFAULT_PROFILE_NAME,
       profileSignature: DEFAULT_PROFILE_SIGNATURE,
       avatarUri: null,
+      collapsedTodoBuckets: [],
     },
   },
   isLoading: true,
@@ -175,6 +217,119 @@ function withUpdatedHabit(habits: Habit[], habitId: string, updater: (habit: Hab
 
 function habitReducer(state: HabitState, action: HabitAction): HabitState {
   switch (action.type) {
+    case 'memo-add':
+      return { ...state, appData: { ...state.appData, memos: [...state.appData.memos, action.memo] } };
+    case 'memo-update':
+      return { ...state, appData: { ...state.appData, memos: state.appData.memos.map(m => m.id === action.id ? { ...m, ...action.patch, updatedAt: Date.now() } : m) } };
+    case 'memo-soft-delete': {
+      const target = new Set(action.ids);
+      const now = Date.now();
+      return { ...state, appData: { ...state.appData, memos: state.appData.memos.map(m => target.has(m.id) ? { ...m, deletedAt: now } : m) } };
+    }
+    case 'memo-restore': {
+      const target = new Set(action.ids);
+      return { ...state, appData: { ...state.appData, memos: state.appData.memos.map(m => target.has(m.id) ? { ...m, deletedAt: null, updatedAt: Date.now() } : m) } };
+    }
+    case 'memo-purge': {
+      const target = new Set(action.ids);
+      return { ...state, appData: { ...state.appData, memos: state.appData.memos.filter(m => !target.has(m.id)) } };
+    }
+    case 'memo-purge-all':
+      return { ...state, appData: { ...state.appData, memos: state.appData.memos.filter(m => m.deletedAt === null) } };
+    case 'memo-move-group': {
+      const target = new Set(action.ids);
+      let nextOrder = state.appData.memos.filter(m => m.deletedAt === null && m.groupId === action.groupId).length;
+      return {
+        ...state,
+        appData: {
+          ...state.appData,
+          memos: state.appData.memos.map(m => {
+            if (!target.has(m.id) || m.groupId === action.groupId) {
+              return m;
+            }
+            const moved = { ...m, groupId: action.groupId, order: nextOrder, updatedAt: Date.now() };
+            nextOrder += 1;
+            return moved;
+          }),
+        },
+      };
+    }
+    case 'memo-reorder': {
+      const orderMap = new Map(action.orderedIds.map((id, index) => [id, index]));
+      return {
+        ...state,
+        appData: {
+          ...state.appData,
+          memos: state.appData.memos.map(m =>
+            m.groupId === action.groupId && orderMap.has(m.id)
+              ? { ...m, order: orderMap.get(m.id) as number }
+              : m
+          ),
+        },
+      };
+    }
+    case 'memo-group-add':
+      return { ...state, appData: { ...state.appData, memoGroups: [...state.appData.memoGroups, action.group] } };
+    case 'memo-group-rename':
+      return {
+        ...state,
+        appData: {
+          ...state.appData,
+          memoGroups: state.appData.memoGroups.map(group =>
+            group.id === action.groupId ? { ...group, name: action.name } : group
+          ),
+        },
+      };
+    case 'memo-group-delete': {
+      const remaining = state.appData.memoGroups.filter(group => group.id !== action.groupId);
+      let nextOrder = state.appData.memos.filter(m => m.groupId === null).length;
+      return {
+        ...state,
+        appData: {
+          ...state.appData,
+          memoGroups: remaining,
+          memos: state.appData.memos.map(m => {
+            if (m.groupId !== action.groupId) {
+              return m;
+            }
+            const moved = { ...m, groupId: null, order: nextOrder };
+            nextOrder += 1;
+            return moved;
+          }),
+        },
+      };
+    }
+    case 'memo-group-reorder': {
+      const orderMap = new Map(action.groupIds.map((id, index) => [id, index]));
+      return {
+        ...state,
+        appData: {
+          ...state.appData,
+          memoGroups: state.appData.memoGroups.map(group =>
+            orderMap.has(group.id) ? { ...group, order: orderMap.get(group.id) as number } : group
+          ),
+        },
+      };
+    }
+    case 'set-todo-bucket-collapsed': {
+      const current = state.appData.settings.collapsedTodoBuckets;
+      const next = action.collapsed
+        ? [...new Set([...current, action.bucketId])]
+        : current.filter(id => id !== action.bucketId);
+      return { ...state, appData: { ...state.appData, settings: { ...state.appData.settings, collapsedTodoBuckets: next } } };
+    }
+    case 'move-todos-to-bucket': {
+      const target = new Set(action.todoIds);
+      return {
+        ...state,
+        appData: {
+          ...state.appData,
+          todos: state.appData.todos.map(todo =>
+            target.has(todo.id) ? { ...todo, dueDateKey: action.dueDateKey } : todo
+          ),
+        },
+      };
+    }
     case 'hydrate':
       return {
         ...state,
@@ -295,6 +450,33 @@ function habitReducer(state: HabitState, action: HabitAction): HabitState {
               : habit
           ),
         },
+      };
+    }
+    case 'move-habits-to-group': {
+      const target = new Set(action.ids);
+      let nextOrder = state.appData.habits.filter(
+        (habit) => habit.groupId === action.groupId && habit.archivedAt === null
+      ).length;
+      return {
+        ...state,
+        appData: {
+          ...state.appData,
+          habits: state.appData.habits.map((habit) => {
+            if (!target.has(habit.id) || habit.groupId === action.groupId) {
+              return habit;
+            }
+            const moved = { ...habit, groupId: action.groupId, order: nextOrder };
+            nextOrder += 1;
+            return moved;
+          }),
+        },
+      };
+    }
+    case 'delete-habits': {
+      const target = new Set(action.ids);
+      return {
+        ...state,
+        appData: { ...state.appData, habits: state.appData.habits.filter((habit) => !target.has(habit.id)) },
       };
     }
     case 'archive-habit':
@@ -458,6 +640,109 @@ function habitReducer(state: HabitState, action: HabitAction): HabitState {
 
 export function HabitProvider({ children }: PropsWithChildren) {
   const [state, dispatch] = useReducer(habitReducer, initialState);
+  const saveQueue = useRef(Promise.resolve());
+  const addMemo = useCallback((groupId: string | null) => {
+    const id = createId();
+    const now = Date.now();
+    dispatch({
+      type: 'memo-add',
+      memo: {
+        id,
+        title: '',
+        body: '',
+        groupId,
+        order: state.appData.memos.filter((memo) => memo.deletedAt === null && memo.groupId === groupId).length,
+        createdAt: now,
+        updatedAt: now,
+        deletedAt: null,
+      },
+    });
+    return id;
+  }, [state.appData.memos]);
+  const updateMemo = useCallback(
+    (id: string, patch: Partial<Pick<Memo, 'title' | 'body' | 'groupId'>>) =>
+      dispatch({ type: 'memo-update', id, patch }),
+    []
+  );
+  const trashMemos = useCallback((ids: string[]) => {
+    if (ids.length > 0) dispatch({ type: 'memo-soft-delete', ids });
+  }, []);
+  const restoreMemos = useCallback((ids: string[]) => {
+    if (ids.length > 0) dispatch({ type: 'memo-restore', ids });
+  }, []);
+  const purgeMemos = useCallback((ids: string[]) => {
+    if (ids.length > 0) dispatch({ type: 'memo-purge', ids });
+  }, []);
+  const purgeAllMemos = useCallback(() => dispatch({ type: 'memo-purge-all' }), []);
+  const moveMemosToGroup = useCallback((ids: string[], groupId: string | null) => {
+    if (ids.length > 0) dispatch({ type: 'memo-move-group', ids, groupId });
+  }, []);
+  const reorderMemos = useCallback((groupId: string | null, orderedIds: string[]) => {
+    dispatch({ type: 'memo-reorder', orderedIds, groupId });
+  }, []);
+  const setTodoBucketCollapsed = useCallback((bucketId: string, collapsed: boolean) => {
+    dispatch({ type: 'set-todo-bucket-collapsed', bucketId, collapsed });
+  }, []);
+  const moveTodosToBucket = useCallback((todoIds: string[], dueDateKey: string | null) => {
+    if (todoIds.length > 0) dispatch({ type: 'move-todos-to-bucket', todoIds, dueDateKey });
+  }, []);
+  const moveHabitsToGroup = useCallback((ids: string[], groupId: string | null) => {
+    if (ids.length > 0) dispatch({ type: 'move-habits-to-group', ids, groupId });
+  }, []);
+  const deleteHabits = useCallback((ids: string[]) => {
+    if (ids.length > 0) dispatch({ type: 'delete-habits', ids });
+  }, []);
+
+  const addMemoGroup = useCallback(
+    (name: string) => {
+      const trimmed = name.trim();
+      if (!trimmed) {
+        dispatch({ type: 'set-error', error: '分类名称不能为空。' });
+        return false;
+      }
+      const exists = state.appData.memoGroups.some(
+        (group) => group.name.trim().toLowerCase() === trimmed.toLowerCase()
+      );
+      if (exists) {
+        dispatch({ type: 'set-error', error: '分类名称已存在，请换一个。' });
+        return false;
+      }
+      dispatch({
+        type: 'memo-group-add',
+        group: { id: createId(), name: trimmed, order: state.appData.memoGroups.length, createdAt: Date.now() },
+      });
+      return true;
+    },
+    [state.appData.memoGroups]
+  );
+
+  const renameMemoGroup = useCallback(
+    (groupId: string, name: string) => {
+      const trimmed = name.trim();
+      if (!trimmed) {
+        dispatch({ type: 'set-error', error: '分类名称不能为空。' });
+        return false;
+      }
+      const exists = state.appData.memoGroups.some(
+        (group) => group.id !== groupId && group.name.trim().toLowerCase() === trimmed.toLowerCase()
+      );
+      if (exists) {
+        dispatch({ type: 'set-error', error: '分类名称已存在，请换一个。' });
+        return false;
+      }
+      dispatch({ type: 'memo-group-rename', groupId, name: trimmed });
+      return true;
+    },
+    [state.appData.memoGroups]
+  );
+
+  const deleteMemoGroup = useCallback((groupId: string) => {
+    dispatch({ type: 'memo-group-delete', groupId });
+  }, []);
+
+  const reorderMemoGroups = useCallback((groupIds: string[]) => {
+    dispatch({ type: 'memo-group-reorder', groupIds });
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -493,7 +778,7 @@ export function HabitProvider({ children }: PropsWithChildren) {
       return;
     }
 
-    saveAppDataToDisk(state.appData).catch((error: unknown) => {
+    saveQueue.current = saveQueue.current.then(() => saveAppDataToDisk(state.appData)).catch((error: unknown) => {
       dispatch({
         type: 'set-error',
         error: error instanceof Error ? error.message : '保存本地数据失败，请稍后重试。',
@@ -754,6 +1039,7 @@ export function HabitProvider({ children }: PropsWithChildren) {
 
     return {
       ...state,
+      setTodoBucketCollapsed,
       allHabits,
       habits,
       archivedHabits,
@@ -761,6 +1047,27 @@ export function HabitProvider({ children }: PropsWithChildren) {
       todos: state.appData.todos,
       settings: state.appData.settings,
       theme: getTheme(state.appData.settings.themeId),
+      memos: state.appData.memos,
+      activeMemos: state.appData.memos.filter((memo) => memo.deletedAt === null),
+      trashedMemos: state.appData.memos
+        .filter((memo) => memo.deletedAt !== null)
+        .sort((left, right) => (right.deletedAt ?? 0) - (left.deletedAt ?? 0)),
+      memoGroups: state.appData.memoGroups,
+      addMemo,
+      updateMemo,
+      trashMemos,
+      restoreMemos,
+      purgeMemos,
+      purgeAllMemos,
+      moveMemosToGroup,
+      reorderMemos,
+      addMemoGroup,
+      renameMemoGroup,
+      deleteMemoGroup,
+      reorderMemoGroups,
+      moveTodosToBucket,
+      moveHabitsToGroup,
+      deleteHabits,
       clearError,
       addGroup,
       renameGroup,
@@ -787,6 +1094,22 @@ export function HabitProvider({ children }: PropsWithChildren) {
     };
   }, [
     state,
+    setTodoBucketCollapsed,
+    addMemo,
+    updateMemo,
+    trashMemos,
+    restoreMemos,
+    purgeMemos,
+    purgeAllMemos,
+    moveMemosToGroup,
+    reorderMemos,
+    addMemoGroup,
+    renameMemoGroup,
+    deleteMemoGroup,
+    reorderMemoGroups,
+    moveTodosToBucket,
+    moveHabitsToGroup,
+    deleteHabits,
     clearError,
     addGroup,
     renameGroup,

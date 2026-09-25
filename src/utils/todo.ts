@@ -74,6 +74,50 @@ export function formatTodoDue(todo: TodoItem) {
   return `${formatFriendlyDate(todo.dueDateKey)}${todo.dueTime ? ` ${todo.dueTime}` : ''}`;
 }
 
+export const TODO_BUCKET_TITLES: Record<TodoBucketId, string> = {
+  overdue: '已逾期',
+  today: '今天',
+  tomorrow: '明天',
+  soon: '未来 7 天',
+  later: '稍后',
+  'no-date': '无日期',
+};
+
+export const TODO_COMPLETED_BUCKET_ID = 'completed';
+
+/**
+ * 多选时“移动到某个日期分组”对应的截止日期。
+ * 已逾期与今天都落到今天，稍后落到 7 天之后。
+ */
+export function bucketToDueDateKey(bucketId: string): string | null {
+  const todayKey = getTodayKey();
+  switch (bucketId) {
+    case 'overdue':
+    case 'today':
+      return todayKey;
+    case 'tomorrow':
+      return addDaysToDateKey(todayKey, 1);
+    case 'soon':
+      return addDaysToDateKey(todayKey, 3);
+    case 'later':
+      return addDaysToDateKey(todayKey, 30);
+    case 'no-date':
+    case TODO_COMPLETED_BUCKET_ID:
+      return null;
+    default:
+      return null;
+  }
+}
+
+/** 多选页里待办所属的分组 id：未完成用日期分组，已完成单独一组。 */
+export function todoGroupKey(todo: TodoItem, buckets: TodoBucket[]) {
+  if (todo.completedAt !== null) {
+    return TODO_COMPLETED_BUCKET_ID;
+  }
+  const bucket = buckets.find((entry) => entry.todos.some((item) => item.id === todo.id));
+  return bucket?.id ?? 'no-date';
+}
+
 export function isTodoOverdue(todo: TodoItem) {
   if (!todo.dueDateKey) {
     return false;

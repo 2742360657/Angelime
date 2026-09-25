@@ -32,6 +32,10 @@ export function ProfileBar({ onPress }: ProfileBarProps) {
           <Text numberOfLines={1} style={styles.signature}>{settings.profileSignature}</Text>
         ) : null}
       </View>
+      <View style={{ alignItems: 'flex-end', gap: 4 }}>
+        <Text style={styles.name}>{new Intl.DateTimeFormat('zh-CN', { month: 'long', day: 'numeric' }).format(new Date())}</Text>
+        <Text style={styles.signature}>{new Intl.DateTimeFormat('zh-CN', { weekday: 'long' }).format(new Date())}</Text>
+      </View>
     </TouchableOpacity>
   );
 }

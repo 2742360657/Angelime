@@ -1,6 +1,6 @@
+import { Alert } from '../platform/alert';
 import { useEffect, useMemo, useState } from 'react';
 import {
-  Alert,
   Image,
   Modal,
   Platform,

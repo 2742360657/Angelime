@@ -40,18 +40,40 @@ export type TodoItem = {
   completedAt: number | null;
 };
 
+export type MemoGroup = {
+  id: string;
+  name: string;
+  order: number;
+  createdAt: number;
+};
+
+export type Memo = {
+  id: string;
+  title: string;
+  body: string;
+  groupId: string | null;
+  order: number;
+  createdAt: number;
+  updatedAt: number;
+  deletedAt: number | null;
+};
+
 export type AppSettings = {
   themeId: ThemeId;
   profileName: string;
   profileSignature: string;
   avatarUri: string | null;
+  /** 已折叠的待办日期分组 id 列表（逾期/今天/明天/未来七天/稍后/无日期/已完成）。 */
+  collapsedTodoBuckets: string[];
 };
 
 export type AppData = {
-  version: 5;
+  version: 7;
   habits: Habit[];
   groups: HabitGroup[];
   todos: TodoItem[];
+  memoGroups: MemoGroup[];
+  memos: Memo[];
   settings: AppSettings;
 };
 

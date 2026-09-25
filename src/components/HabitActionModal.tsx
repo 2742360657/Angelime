@@ -1,5 +1,6 @@
+import { Alert } from '../platform/alert';
 import { useMemo } from 'react';
-import { Alert, Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { useHabits } from '../state/HabitStore';
 import { Habit } from '../types/habit';

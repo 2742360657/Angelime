@@ -17,6 +17,11 @@ type GroupPickerModalProps = {
   selectedGroupId: string | null;
   onClose: () => void;
   onSubmit: (groupId: string | null) => void;
+  /** 自定义候选分组；不传则使用习惯分组。 */
+  options?: Array<{ id: string | null; label: string }>;
+  /** 是否提供“未分组/未分类”这一项。 */
+  allowNull?: boolean;
+  nullLabel?: string;
 };
 
 export function GroupPickerModal({
@@ -25,10 +30,18 @@ export function GroupPickerModal({
   selectedGroupId,
   onClose,
   onSubmit,
+  options,
+  allowNull = true,
+  nullLabel = '未分组',
 }: GroupPickerModalProps) {
   const { theme, groups } = useHabits();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const [nextGroupId, setNextGroupId] = useState<string | null>(selectedGroupId);
+
+  const candidates = useMemo(
+    () => options ?? groups.map((group) => ({ id: group.id, label: group.name })),
+    [groups, options]
+  );
 
   useEffect(() => {
     if (visible) {
@@ -54,19 +67,23 @@ export function GroupPickerModal({
           <Text style={styles.title}>{title}</Text>
 
           <ScrollView contentContainerStyle={styles.groupList} showsVerticalScrollIndicator={false}>
-            <GroupRow
-              label="未分组"
-              selected={nextGroupId === null}
-              onPress={() => setNextGroupId(null)}
-            />
-            {groups.map((group) => (
+            {allowNull ? (
               <GroupRow
-                key={group.id}
-                label={group.name}
-                selected={nextGroupId === group.id}
-                onPress={() => setNextGroupId(group.id)}
+                label={candidates.find((candidate) => candidate.id === null)?.label ?? nullLabel}
+                selected={nextGroupId === null}
+                onPress={() => setNextGroupId(null)}
               />
-            ))}
+            ) : null}
+            {candidates
+              .filter((candidate) => candidate.id !== null)
+              .map((candidate) => (
+                <GroupRow
+                  key={candidate.id ?? '__none__'}
+                  label={candidate.label}
+                  selected={nextGroupId === candidate.id}
+                  onPress={() => setNextGroupId(candidate.id)}
+                />
+              ))}
           </ScrollView>
 
           <View style={styles.actions}>

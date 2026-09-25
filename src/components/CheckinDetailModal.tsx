@@ -1,6 +1,6 @@
+import { Alert } from '../platform/alert';
 import { useMemo, useState } from 'react';
 import {
-  Alert,
   Modal,
   Pressable,
   ScrollView,

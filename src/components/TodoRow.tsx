@@ -1,5 +1,8 @@
 import { useMemo, useRef } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import Animated from 'react-native-reanimated';
+
+import { LIST_ITEM_ENTERING, LIST_ITEM_EXITING, LIST_LAYOUT } from '../theme/animation';
 
 import { useHabits } from '../state/HabitStore';
 import { TodoItem } from '../types/habit';
@@ -21,7 +24,12 @@ export function TodoRow({ todo, onToggle, onPress, onLongPress, compact = false 
   const lastLongPress = useRef(0);
 
   return (
-    <View style={[styles.row, compact && styles.rowCompact, completed && styles.rowCompleted]}>
+    <Animated.View
+      entering={LIST_ITEM_ENTERING}
+      exiting={LIST_ITEM_EXITING}
+      layout={LIST_LAYOUT}
+      style={[styles.row, compact && styles.rowCompact, completed && styles.rowCompleted]}
+    >
       <TouchableOpacity
         accessibilityLabel={completed ? `恢复待办：${todo.title}` : `完成待办：${todo.title}`}
         onPress={() => onToggle(todo)}
@@ -48,7 +56,7 @@ export function TodoRow({ todo, onToggle, onPress, onLongPress, compact = false 
       <TouchableOpacity accessibilityLabel="编辑待办" onPress={() => onPress(todo)} style={styles.more}>
         <Text style={styles.moreText}>›</Text>
       </TouchableOpacity>
-    </View>
+    </Animated.View>
   );
 }
 

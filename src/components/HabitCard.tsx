@@ -1,5 +1,8 @@
 import { useMemo, useRef } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import Animated from 'react-native-reanimated';
+
+import { LIST_ITEM_ENTERING, LIST_ITEM_EXITING, LIST_LAYOUT } from '../theme/animation';
 
 import { useHabits } from '../state/HabitStore';
 import { Habit } from '../types/habit';
@@ -28,7 +31,12 @@ export function HabitCard({
   const lastLongPress = useRef(0);
 
   return (
-    <View style={[styles.card, compact && styles.cardCompact, progress.completed && styles.cardCompleted]}>
+    <Animated.View
+      entering={LIST_ITEM_ENTERING}
+      exiting={LIST_ITEM_EXITING}
+      layout={LIST_LAYOUT}
+      style={[styles.card, compact && styles.cardCompact, progress.completed && styles.cardCompleted]}
+    >
       <TouchableOpacity
         style={styles.infoPressable}
         delayLongPress={360}
@@ -58,7 +66,7 @@ export function HabitCard({
           <Text style={styles.moreText}>•••</Text>
         </TouchableOpacity>
       ) : null}
-    </View>
+    </Animated.View>
   );
 }
 

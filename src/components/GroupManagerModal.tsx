@@ -1,5 +1,6 @@
+import { Alert } from '../platform/alert';
 import { useMemo, useState } from 'react';
-import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { getGroupUsageCount } from '../storage/habitStorage';
 import { useHabits } from '../state/HabitStore';
@@ -10,31 +11,74 @@ import { TextEntryModal } from './TextEntryModal';
 type GroupManagerModalProps = {
   visible: boolean;
   onClose: () => void;
+  /** 不传则管理习惯分组。 */
+  title?: string;
+  groups?: HabitGroup[];
+  onAdd?: (name: string) => boolean;
+  onRename?: (groupId: string, name: string) => boolean;
+  onDelete?: (groupId: string) => void;
+  onReorder?: (groupIds: string[]) => void;
+  usageLabel?: (groupId: string) => string;
+  deleteConfirmText?: (name: string, usageText: string) => string;
 };
 
-export function GroupManagerModal({ visible, onClose }: GroupManagerModalProps) {
-  const { allHabits, groups, theme, addGroup, renameGroup, deleteGroup, reorderGroups } = useHabits();
+export function GroupManagerModal({
+  visible,
+  onClose,
+  title = '分组管理',
+  groups: groupsProp,
+  onAdd,
+  onRename,
+  onDelete,
+  onReorder,
+  usageLabel,
+  deleteConfirmText,
+}: GroupManagerModalProps) {
+  const {
+    allHabits,
+    groups: habitGroups,
+    theme,
+    addGroup,
+    renameGroup,
+    deleteGroup,
+    reorderGroups,
+  } = useHabits();
+  const groups = groupsProp ?? habitGroups;
+  const handleAdd = onAdd ?? addGroup;
+  const handleRename = onRename ?? renameGroup;
+  const handleDelete = onDelete ?? deleteGroup;
+  const handleReorder = onReorder ?? reorderGroups;
   const styles = useMemo(() => createStyles(theme), [theme]);
   const [addingGroup, setAddingGroup] = useState(false);
   const [editingGroup, setEditingGroup] = useState<HabitGroup | null>(null);
   const [reorderVisible, setReorderVisible] = useState(false);
   const orderedGroups = [...groups].sort((left, right) => left.order - right.order);
 
+  const usageText = (groupId: string) =>
+    usageLabel
+      ? usageLabel(groupId)
+      : `${getGroupUsageCount(allHabits, groupId)} 个习惯`;
+
   const handleDeleteGroup = (groupId: string, groupName: string) => {
-    const usageCount = getGroupUsageCount(allHabits, groupId);
+    const usage = usageText(groupId);
+    const message = deleteConfirmText
+      ? deleteConfirmText(groupName, usage)
+      : usageLabel
+        ? `删除“${groupName}”后，其中 ${usage} 会移到未分类。`
+        : Number.parseInt(usage, 10) > 0
+          ? `删除“${groupName}”后，该分组下的 ${usage}会自动移到“未分组”。`
+          : `删除“${groupName}”后，该分组会被直接移除。`;
 
     Alert.alert(
       '确认删除分组',
-      usageCount > 0
-        ? `删除“${groupName}”后，该分组下的 ${usageCount} 个习惯会自动移到“未分组”。`
-        : `删除“${groupName}”后，该分组会被直接移除。`,
+      message,
       [
         { text: '取消', style: 'cancel' },
         {
           text: '确认删除',
           style: 'destructive',
           onPress: () => {
-            deleteGroup(groupId);
+            handleDelete(groupId);
           },
         },
       ]
@@ -54,7 +98,7 @@ export function GroupManagerModal({ visible, onClose }: GroupManagerModalProps) 
           <View style={styles.card}>
             <View style={styles.header}>
               <View style={styles.headerText}>
-                <Text style={styles.title}>分组管理</Text>
+                <Text style={styles.title}>{title}</Text>
               </View>
               <View style={styles.headerActions}>
                 <TouchableOpacity onPress={() => setAddingGroup(true)} style={styles.addButton}>
@@ -80,7 +124,7 @@ export function GroupManagerModal({ visible, onClose }: GroupManagerModalProps) 
                       style={styles.meta}
                     >
                       <Text style={styles.name}>{group.name}</Text>
-                      <Text style={styles.usage}>{getGroupUsageCount(allHabits, group.id)} 个习惯</Text>
+                      <Text style={styles.usage}>{usageText(group.id)}</Text>
                     </TouchableOpacity>
                     <View style={styles.rowActions}>
                       <TouchableOpacity onPress={() => setEditingGroup(group)} style={styles.editButton}>
@@ -111,7 +155,7 @@ export function GroupManagerModal({ visible, onClose }: GroupManagerModalProps) 
         placeholder="分组名称"
         submitLabel="保存"
         onClose={() => setAddingGroup(false)}
-        onSubmit={addGroup}
+        onSubmit={handleAdd}
       />
       <TextEntryModal
         visible={editingGroup !== null}
@@ -120,7 +164,7 @@ export function GroupManagerModal({ visible, onClose }: GroupManagerModalProps) 
         submitLabel="保存"
         initialValue={editingGroup?.name ?? ''}
         onClose={() => setEditingGroup(null)}
-        onSubmit={(name) => (editingGroup ? renameGroup(editingGroup.id, name) : false)}
+        onSubmit={(name) => (editingGroup ? handleRename(editingGroup.id, name) : false)}
       />
       <ReorderModal
         visible={reorderVisible}
@@ -128,10 +172,10 @@ export function GroupManagerModal({ visible, onClose }: GroupManagerModalProps) 
         items={orderedGroups.map((group) => ({
           id: group.id,
           label: group.name,
-          subtitle: `${getGroupUsageCount(allHabits, group.id)} 个习惯`,
+          subtitle: usageText(group.id),
         }))}
         onClose={() => setReorderVisible(false)}
-        onSave={reorderGroups}
+        onSave={handleReorder}
       />
     </>
   );

@@ -1,8 +1,8 @@
+import { Alert } from '../platform/alert';
 import { useMemo, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { ArchivedHabitsModal } from '../components/ArchivedHabitsModal';
-import { GroupManagerModal } from '../components/GroupManagerModal';
 import { ProfileEditorModal } from '../components/ProfileEditorModal';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { ThemeSelectionModal } from '../components/ThemeSelectionModal';
@@ -14,12 +14,11 @@ import {
 import { useHabits } from '../state/HabitStore';
 
 export function SettingsScreen() {
-  const { appData, archivedHabits, groups, theme, replaceAppData } = useHabits();
+  const { appData, archivedHabits, theme, replaceAppData } = useHabits();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const [busyAction, setBusyAction] = useState<'backup' | 'restore' | null>(null);
   const [themeVisible, setThemeVisible] = useState(false);
   const [profileVisible, setProfileVisible] = useState(false);
-  const [groupManagerVisible, setGroupManagerVisible] = useState(false);
   const [archivedVisible, setArchivedVisible] = useState(false);
 
   const handleBackup = async () => {
@@ -48,7 +47,7 @@ export function SettingsScreen() {
 
       Alert.alert(
         '覆盖恢复确认',
-        `即将使用“${fileAsset.name ?? '所选文件'}”覆盖当前本地全部数据，包括待办、习惯、个人资料和主题。此操作无法撤销。`,
+        `即将使用“${fileAsset.name ?? '所选文件'}”覆盖当前本地全部数据，包括待办、习惯、备忘录、个人资料和主题。此操作无法撤销。`,
         [
           { text: '取消', style: 'cancel' },
           {
@@ -89,11 +88,6 @@ export function SettingsScreen() {
             onPress={() => setThemeVisible(true)}
           />
           <SettingRow
-            label="分组管理"
-            value={`${groups.length} 个分组`}
-            onPress={() => setGroupManagerVisible(true)}
-          />
-          <SettingRow
             label="归档习惯"
             value={`${archivedHabits.length} 个`}
             onPress={() => setArchivedVisible(true)}
@@ -127,7 +121,6 @@ export function SettingsScreen() {
 
       <ThemeSelectionModal visible={themeVisible} onClose={() => setThemeVisible(false)} />
       <ProfileEditorModal visible={profileVisible} onClose={() => setProfileVisible(false)} />
-      <GroupManagerModal visible={groupManagerVisible} onClose={() => setGroupManagerVisible(false)} />
       <ArchivedHabitsModal visible={archivedVisible} onClose={() => setArchivedVisible(false)} />
     </>
   );

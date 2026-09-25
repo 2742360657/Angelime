@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
@@ -17,6 +18,8 @@ import {
   LegacyV3CheckinRecord,
   LegacyV4AppDataFile,
   TodoItem,
+  Memo,
+  MemoGroup,
 } from '../types/habit';
 import { buildFallbackTimestamp, clampToMinute, toLocalDateKey } from '../utils/date';
 import { createId } from '../utils/id';
@@ -199,10 +202,92 @@ function sanitizeTodo(candidate: unknown, fallbackOrder = 0): TodoItem | null {
   };
 }
 
+function sanitizeMemoGroup(candidate: unknown, fallbackOrder = 0): MemoGroup | null {
+  if (!candidate || typeof candidate !== 'object') {
+    return null;
+  }
+
+  const raw = candidate as Partial<MemoGroup>;
+  if (typeof raw.id !== 'string' || typeof raw.name !== 'string' || !raw.name.trim()) {
+    return null;
+  }
+
+  return {
+    id: raw.id,
+    name: raw.name.trim(),
+    order: typeof raw.order === 'number' ? raw.order : fallbackOrder,
+    createdAt: typeof raw.createdAt === 'number' ? raw.createdAt : Date.now(),
+  };
+}
+
+/** v6 及更早版本用字符串 `category` 存分类，这里迁移成 `memoGroups` + `groupId`。 */
+function migrateLegacyMemos(candidate: unknown, groups: MemoGroup[]) {
+  if (!Array.isArray(candidate)) {
+    return { memos: [] as Memo[], groups };
+  }
+
+  const nextGroups = [...groups];
+  const groupIdByName = new Map(nextGroups.map((group) => [group.name, group.id]));
+  const memos: Memo[] = [];
+
+  for (const item of candidate) {
+    if (!item || typeof item !== 'object') {
+      continue;
+    }
+    const raw = item as Partial<Memo> & { category?: unknown; pinned?: unknown };
+    if (
+      typeof raw.id !== 'string' ||
+      typeof raw.title !== 'string' ||
+      typeof raw.body !== 'string' ||
+      !Number.isFinite(raw.createdAt) ||
+      !Number.isFinite(raw.updatedAt)
+    ) {
+      continue;
+    }
+
+    let groupId: string | null = null;
+    if (typeof raw.groupId === 'string' && nextGroups.some((group) => group.id === raw.groupId)) {
+      groupId = raw.groupId;
+    } else if (typeof raw.category === 'string' && raw.category.trim()) {
+      const name = raw.category.trim();
+      let existingId = groupIdByName.get(name);
+      if (!existingId) {
+        existingId = createId();
+        groupIdByName.set(name, existingId);
+        nextGroups.push({
+          id: existingId,
+          name,
+          order: nextGroups.length,
+          createdAt: raw.createdAt as number,
+        });
+      }
+      groupId = existingId;
+    }
+
+    memos.push({
+      id: raw.id,
+      title: raw.title,
+      body: raw.body,
+      groupId,
+      order: typeof raw.order === 'number' ? raw.order : memos.length,
+      createdAt: raw.createdAt as number,
+      updatedAt: raw.updatedAt as number,
+      deletedAt: typeof raw.deletedAt === 'number' ? raw.deletedAt : null,
+    });
+  }
+
+  return { memos, groups: nextGroups };
+}
+
 function sanitizeSettings(candidate: unknown): AppSettings {
   const raw = candidate && typeof candidate === 'object' ? (candidate as Partial<AppSettings>) : {};
 
+  const collapsedTodoBuckets = Array.isArray(raw.collapsedTodoBuckets)
+    ? [...new Set(raw.collapsedTodoBuckets.filter((id): id is string => typeof id === 'string'))]
+    : [];
+
   return {
+    collapsedTodoBuckets,
     themeId: isThemeId(raw.themeId) ? raw.themeId : DEFAULT_THEME_ID,
     profileName:
       typeof raw.profileName === 'string' && raw.profileName.trim()
@@ -218,10 +303,12 @@ function sanitizeSettings(candidate: unknown): AppSettings {
 
 function buildDefaultAppData(): AppData {
   return {
-    version: 5,
+    version: 7,
     habits: [],
     groups: [],
     todos: [],
+    memoGroups: [],
+    memos: [],
     settings: sanitizeSettings(null),
   };
 }
@@ -259,11 +346,31 @@ function normalizeAppData(candidate: unknown): AppData {
         .sort((left, right) => left.order - right.order)
     : [];
 
+  const memoGroups = Array.isArray(raw.memoGroups)
+    ? raw.memoGroups
+        .map((group, index) => sanitizeMemoGroup(group, index))
+        .filter((group): group is MemoGroup => group !== null)
+        .sort((left, right) => left.order - right.order)
+    : [];
+
+  const memoGroupIds = new Set(memoGroups.map((group) => group.id));
+  const migratedMemos = migrateLegacyMemos(raw.memos, memoGroups);
+  const memos = migratedMemos.memos
+    .map((memo) => ({
+      ...memo,
+      groupId: memo.groupId && memoGroupIds.has(memo.groupId) ? memo.groupId : null,
+    }))
+    .sort((left, right) => left.order - right.order);
+
   return {
-    version: 5,
+    version: 7,
     habits,
     groups,
     todos,
+    memoGroups: migratedMemos.groups
+      .slice()
+      .sort((left, right) => left.order - right.order),
+    memos,
     settings: sanitizeSettings(raw.settings),
   };
 }
@@ -290,10 +397,12 @@ function migrateLegacyV1Data(candidate: unknown): AppData {
     .sort((left, right) => left.createdAt - right.createdAt);
 
   return {
-    version: 5,
+    version: 7,
     habits,
     groups: [],
     todos: [],
+    memoGroups: [],
+    memos: [],
     settings: sanitizeSettings(null),
   };
 }
@@ -310,7 +419,7 @@ function migrateLegacyV2Data(candidate: unknown): AppData {
 
   return normalizeAppData({
     ...raw,
-    version: 5,
+    version: 7,
     habits: raw.habits.map((habit) => ({
       ...habit,
       archivedAt: habit.hiddenAt ?? null,
@@ -330,7 +439,7 @@ function migrateLegacyV3Data(candidate: unknown): AppData {
 
   return normalizeAppData({
     ...raw,
-    version: 5,
+    version: 7,
   });
 }
 
@@ -346,8 +455,10 @@ function migrateLegacyV4Data(candidate: unknown): AppData {
 
   return normalizeAppData({
     ...raw,
-    version: 5,
+    version: 7,
     todos: [],
+    memoGroups: [],
+    memos: [],
   });
 }
 
@@ -357,7 +468,7 @@ export function coerceAppData(candidate: unknown): AppData {
   }
 
   const raw = candidate as { version?: unknown };
-  if (raw.version === 5) {
+  if (raw.version === 7 || raw.version === 6 || raw.version === 5) {
     return normalizeAppData(candidate);
   }
   if (raw.version === 4) {
@@ -393,6 +504,10 @@ async function ensureStorageDirectory() {
 }
 
 export async function loadAppDataFromDisk(): Promise<AppData> {
+  if (Platform.OS === 'web') {
+    const saved = localStorage.getItem('angelime-data');
+    return saved ? coerceAppData(JSON.parse(saved)) : buildDefaultAppData();
+  }
   await ensureStorageDirectory();
 
   const fileInfo = await FileSystem.getInfoAsync(DATA_FILE);
@@ -405,6 +520,10 @@ export async function loadAppDataFromDisk(): Promise<AppData> {
 }
 
 export async function saveAppDataToDisk(appData: AppData) {
+  if (Platform.OS === 'web') {
+    localStorage.setItem('angelime-data', JSON.stringify(appData));
+    return;
+  }
   await ensureStorageDirectory();
   await FileSystem.writeAsStringAsync(DATA_FILE, JSON.stringify(appData, null, 2));
 }
@@ -468,4 +587,8 @@ export async function importBackupFile(fileUri: string): Promise<AppData> {
 
 export function getGroupUsageCount(habits: Habit[], groupId: string) {
   return habits.filter((habit) => habit.groupId === groupId).length;
+}
+
+export function getMemoGroupUsageCount(memos: Memo[], groupId: string) {
+  return memos.filter((memo) => memo.deletedAt === null && memo.groupId === groupId).length;
 }
