@@ -37,9 +37,8 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
-# local UI smoke-test output
+# 本地 UI 冒烟测试输出（脚本已移除，保留规则避免误提交）
 artifacts/
-.edge-test-profile*/
 ui-*.png
 
 # Android / Gradle 构建产物（android/ 本身纳入版本控制）

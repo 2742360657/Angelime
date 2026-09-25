@@ -25,9 +25,6 @@
     },
     "web": {
       "favicon": "./assets/lime-icon.png"
-    },
-    "plugins": [
-      "expo-build-properties"
-    ]
+    }
   }
 }
