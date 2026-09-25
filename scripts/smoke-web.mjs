@@ -1,13 +1,34 @@
 import assert from 'node:assert/strict';
+import { existsSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright-core';
 
-const edgePath = 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe';
+// 依次尝试本机常见的 Chromium 系浏览器，可用 SMOKE_BROWSER 显式指定可执行文件路径。
+const BROWSER_CANDIDATES = [
+  process.env.SMOKE_BROWSER,
+  '/usr/bin/microsoft-edge-stable',
+  '/opt/microsoft/msedge/msedge',
+  '/usr/bin/google-chrome-stable',
+  '/usr/bin/chromium',
+  '/usr/bin/chromium-browser',
+  'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
+  'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+  '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge',
+  '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+].filter(Boolean);
+
+const browserPath = BROWSER_CANDIDATES.find((candidate) => existsSync(candidate));
+if (!browserPath) {
+  throw new Error(
+    `未找到可用的 Chromium 系浏览器，请设置 SMOKE_BROWSER 指向浏览器可执行文件。已尝试：\n${BROWSER_CANDIDATES.join('\n')}`,
+  );
+}
+
 const baseUrl = process.env.SMOKE_BASE_URL ?? 'http://localhost:8081';
 
 await mkdir('artifacts', { recursive: true });
 
-const browser = await chromium.launch({ executablePath: edgePath, headless: true });
+const browser = await chromium.launch({ executablePath: browserPath, headless: true });
 const context = await browser.newContext({ viewport: { width: 500, height: 900 }, hasTouch: true, isMobile: true });
 const page = await context.newPage();
 page.on('dialog', async (dialog) => dialog.dismiss());

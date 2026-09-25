@@ -29,23 +29,54 @@
 
 ## 运行
 
+本地安装依赖后，用数据线或无线调试连接真机，编译并安装调试包：
+
 ```bash
 npm install
-npm run android
+npm run android          # 首次会自动生成 android/ 原生工程并编译安装到已连接设备
 ```
 
-Web 调试：
+`android/` 已纳入版本控制。改动 JS/TS 代码时不需要重新编译原生，只启动 Metro 即可：
 
 ```bash
-npm run web
+npm start                # 然后按 a 打开设备上已安装的 App
 ```
+
+只有新增原生依赖或修改 `app.json` 配置后，才需要重新执行 `npm run android`。
+
+### 直接使用 Gradle
+
+`android/` 生成后也可以绕过 Expo CLI 直接构建：
+
+```bash
+cd android
+./gradlew assembleDebug      # 产物：app/build/outputs/apk/debug/app-debug.apk
+./gradlew assembleRelease    # 产物：app/build/outputs/apk/release/app-release.apk
+adb install -r app/build/outputs/apk/release/app-release.apk
+```
+
+`assembleRelease` 默认使用 Expo 模板自带的 debug 签名，可直接安装测试；正式分发前需按
+[本地生产构建](https://docs.expo.dev/guides/local-app-production/) 配置自己的 keystore。
+
+### 环境要求
+
+| 组件 | 版本 |
+| --- | --- |
+| JDK | 17 |
+| Android SDK Platform | android-36 |
+| Android Build Tools | 36.0.0 |
+| Gradle | 9.0.0（wrapper 自带，无需单独安装） |
+| Node.js | ≥ 20.19 |
+
+需要设置 `JAVA_HOME`、`ANDROID_HOME`，并把 `$ANDROID_HOME/platform-tools` 加入 `PATH`。
 
 ## 校验
 
 ```bash
-npx tsc --noEmit
-npx expo export --platform android --output-dir dist
-npm run test:smoke-web
+npm run typecheck        # tsc --noEmit
+npm run test:smoke-web   # Web 界面冒烟测试
 ```
 
-`test:smoke-web` 会复用 Windows 已安装的 Microsoft Edge，覆盖宽松日期时间输入、待办新增/完成/撤销、习惯周期、长按拖动排序和个人资料编辑。
+`test:smoke-web` 会自动探测本机 Chromium 系浏览器（Edge / Chrome / Chromium），也可用
+`SMOKE_BROWSER=/path/to/browser` 指定；覆盖宽松日期时间输入、待办新增/完成/撤销、习惯周期、
+长按拖动排序和个人资料编辑，截图输出到 `artifacts/`。

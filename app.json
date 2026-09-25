@@ -25,12 +25,6 @@
     },
     "web": {
       "favicon": "./assets/lime-icon.png"
-    },
-    "extra": {
-      "eas": {
-        "projectId": "ecfbdd53-184e-4159-a0b5-1d441edcea7e"
-      }
-    },
-    "owner": "sunsnowy"
+    }
   }
 }

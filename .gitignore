@@ -11,16 +11,15 @@ web-build/
 expo-env.d.ts
 .cache/
 
-# Native
-.kotlin/
-*.orig.*
+# 签名与密钥
 *.jks
 *.p8
 *.p12
 *.key
 *.mobileprovision
 
-# Metro
+# Kotlin / Metro
+.kotlin/
 .metro-health-check*
 
 # debug
@@ -43,6 +42,17 @@ artifacts/
 .edge-test-profile*/
 ui-*.png
 
-# generated native folders
+# Android / Gradle 构建产物（android/ 本身纳入版本控制）
+/android/.gradle/
+/android/build/
+/android/app/build/
+/android/app/.cxx/
+/android/local.properties
+/android/.idea/
+*.apk
+*.aab
+*.keystore
+!android/app/debug.keystore
+
+# iOS 原生工程暂未使用
 /ios
-/android
