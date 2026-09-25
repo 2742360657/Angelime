@@ -1,13 +1,20 @@
-import { PropsWithChildren, useEffect, useMemo, useState } from 'react';
-import { LayoutChangeEvent, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import Animated, {
-  Easing,
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from 'react-native-reanimated';
+import { PropsWithChildren, useMemo } from 'react';
+import {
+  LayoutAnimation,
+  Platform,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  UIManager,
+  View,
+} from 'react-native';
 
 import { useHabits } from '../state/HabitStore';
+
+// Android 需要显式开启 LayoutAnimation（官方文档要求）。
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 type AccordionSectionProps = {
   title: string;
@@ -19,15 +26,12 @@ type AccordionSectionProps = {
   accessibilityLabel?: string;
 };
 
-const DURATION = 220;
-const EASE = Easing.bezier(0.25, 0.1, 0.25, 1);
-
 /**
  * 可折叠分组。
  *
- * 折叠动画采用 Reanimated 官方 Accordion 示例的做法：
- * 先测量内容自然高度，再用 withTiming 同时动画「容器高度」与「内容透明度」。
- * 这样展开/收起是内容本身在生长收缩，而不是整块内容滑入滑出。
+ * 折叠动画用 React Native 内置的 LayoutAnimation：
+ * 它专门用于「视图层级或尺寸发生变化」的场景，会在下一次布局时自动插入过渡，
+ * 不需要手动测量内容高度，因此不会出现「测量到 0 后内容再也显示不出来」的问题。
  */
 export function AccordionSection({
   title,
@@ -41,39 +45,14 @@ export function AccordionSection({
   const { theme } = useHabits();
   const styles = useMemo(() => createStyles(theme), [theme]);
 
-  /** 内容的自然高度；首次测量完成前高度为 0。 */
-  const [contentHeight, setContentHeight] = useState<number | null>(null);
-  const animatedHeight = useSharedValue(0);
-  const animatedOpacity = useSharedValue(0);
-
-  useEffect(() => {
-    if (contentHeight === null) {
-      return;
-    }
-    animatedHeight.value = withTiming(collapsed ? 0 : contentHeight, {
-      duration: DURATION,
-      easing: EASE,
+  const handleToggle = () => {
+    LayoutAnimation.configureNext({
+      duration: 220,
+      create: { type: 'easeInEaseOut', property: 'opacity' },
+      update: { type: 'easeInEaseOut' },
+      delete: { type: 'easeInEaseOut', property: 'opacity' },
     });
-    animatedOpacity.value = withTiming(collapsed ? 0 : 1, {
-      duration: collapsed ? DURATION * 0.6 : DURATION,
-      easing: EASE,
-    });
-  }, [animatedHeight, animatedOpacity, collapsed, contentHeight]);
-
-  const containerStyle = useAnimatedStyle(() => ({
-    height: animatedHeight.value,
-    overflow: 'hidden',
-  }));
-
-  const bodyStyle = useAnimatedStyle(() => ({
-    opacity: animatedOpacity.value,
-  }));
-
-  const handleLayout = (event: LayoutChangeEvent) => {
-    const height = event.nativeEvent.layout.height;
-    if (height > 0 && height !== contentHeight) {
-      setContentHeight(height);
-    }
+    onToggle();
   };
 
   return (
@@ -82,7 +61,7 @@ export function AccordionSection({
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel ?? `折叠${title}`}
         accessibilityState={{ expanded: !collapsed }}
-        onPress={onToggle}
+        onPress={handleToggle}
         style={styles.header}
       >
         <Text style={[styles.title, danger && styles.dangerTitle]}>{title}</Text>
@@ -92,12 +71,7 @@ export function AccordionSection({
         </View>
       </TouchableOpacity>
 
-      <Animated.View style={containerStyle}>
-        {/* 内层始终渲染，用于测量真实高度并做透明度过渡。 */}
-        <Animated.View style={[styles.body, bodyStyle]}>
-          <View onLayout={handleLayout}>{children}</View>
-        </Animated.View>
-      </Animated.View>
+      {collapsed ? null : <View style={styles.body}>{children}</View>}
     </View>
   );
 }
