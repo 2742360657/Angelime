@@ -36,7 +36,9 @@ export function AccordionSection({
   const styles = useMemo(() => createStyles(theme), [theme]);
 
   return (
-    <View style={styles.section}>
+    /* 根节点必须带 layout：内容挂载/卸载时本分组自身的高度变化也要参与动画，
+       否则外层高度会瞬间跳变，内层的让位动画就看不出来。 */
+    <Animated.View layout={LIST_LAYOUT} style={styles.section}>
       <TouchableOpacity
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel ?? `折叠${title}`}
@@ -51,13 +53,19 @@ export function AccordionSection({
         </View>
       </TouchableOpacity>
 
-      {/* 与列表条目同一套布局动画：展开/收起时内容平滑生长收缩，不再瞬间跳变。 */}
-      {collapsed ? null : (
-        <Animated.View layout={LIST_LAYOUT} style={styles.body}>
-          {children}
-        </Animated.View>
-      )}
-    </View>
+
+      {/*
+        内容始终保持挂载，只切换高度 0 ↔ auto。
+        这样 LinearTransition 能真正对「尺寸变化」做补间（卸载的场景它无法补间），
+        收起时呈现向上收回的效果；同时避免手动测量高度带来的各种坑。
+      */}
+      <Animated.View
+        layout={LIST_LAYOUT}
+        style={[styles.body, collapsed ? styles.bodyCollapsed : styles.bodyExpanded]}
+      >
+        {children}
+      </Animated.View>
+    </Animated.View>
   );
 }
 
@@ -76,6 +84,8 @@ function createStyles(theme: ReturnType<typeof useHabits>['theme']) {
     headerRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
     meta: { fontSize: 12, fontWeight: '700', color: theme.colors.textSecondary },
     chevron: { fontSize: 12, fontWeight: '700', color: theme.colors.primary },
-    body: { gap: 10 },
+    body: { overflow: 'hidden' },
+    bodyExpanded: {},
+    bodyCollapsed: { height: 0 },
   });
 }
