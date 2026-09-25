@@ -8,7 +8,7 @@ import { Easing, FadeIn, FadeOut, LinearTransition } from 'react-native-reanimat
  *
  *   1. 页面切换      —— 整页淡入（FadeIn）
  *   2. 列表增删      —— LinearTransition 让其余条目平滑让位
- *   3. 折叠展开      —— 由 AccordionSection 自行动画高度（官方 Accordion 做法）
+ *   3. 折叠展开      —— AccordionSection 切换 height 0 ↔ auto，同样由 layout 补间
  */
 
 const EASE_OUT = Easing.out(Easing.cubic);

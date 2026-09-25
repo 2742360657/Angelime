@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, useWindowDimensions } from 'react-native';
 import {
   createDrawerNavigator,
   DrawerContentScrollView,

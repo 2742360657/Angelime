@@ -136,7 +136,6 @@ export function TasksScreen() {
         items={boardItems}
         groups={boardGroups}
         selectedIds={selectedIds}
-        onToggle={(id) => setSelectedIds((current) => toggleId(current, id))}
         onSetSelection={setSelectedIds}
         onCommit={(ordered) => {
           ordered.forEach((entry) => {

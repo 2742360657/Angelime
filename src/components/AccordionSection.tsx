@@ -18,10 +18,10 @@ type AccordionSectionProps = {
 /**
  * 可折叠分组。
  *
- * 折叠动画与列表条目统一使用 Reanimated 的 LinearTransition：
- * 内容挂载/卸载时由布局动画负责尺寸过渡，避免同时使用 RN 的 LayoutAnimation
- * 与 Reanimated 两套系统造成「外层瞬间跳变、内层缓慢移动」的不一致观感。
- * 不手动测量高度，因此不会出现「测量到 0 后内容再也显示不出来」的问题。
+ * 折叠动画与列表条目统一使用 Reanimated 的 LinearTransition，
+ * 且内容始终保持挂载（只切换 height 0 ↔ auto）：
+ * layout 动画只能对「保持挂载的视图」补间尺寸，卸载/挂载不参与动画。
+ * 不手动测量高度，因此不存在「测量到 0 后内容再也显示不出来」的问题。
  */
 export function AccordionSection({
   title,

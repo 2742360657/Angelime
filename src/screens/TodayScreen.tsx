@@ -196,7 +196,6 @@ export function TodayScreen() {
         items={boardItems}
         groups={boardGroups}
         selectedIds={selectedTodoIds}
-        onToggle={(id) => setSelectedTodoIds((current) => toggleId(current, id))}
         onSetSelection={setSelectedTodoIds}
         onCommit={(ordered) => {
           ordered.forEach((entry) => {
@@ -234,7 +233,6 @@ export function TodayScreen() {
         items={habitBoardItems}
         groups={habitGroups}
         selectedIds={selectedHabitIds}
-        onToggle={(id) => setSelectedHabitIds((current) => toggleId(current, id))}
         onSetSelection={setSelectedHabitIds}
         onCommit={(ordered) => {
           ordered.forEach((entry) => {

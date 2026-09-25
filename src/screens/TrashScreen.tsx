@@ -41,7 +41,6 @@ export function TrashScreen() {
         }))}
         groups={[{ id: '__trash__', title: '回收站', acceptsDrop: false }]}
         selectedIds={selectedIds}
-        onToggle={(id) => setSelectedIds((current) => toggleId(current, id))}
         onSetSelection={setSelectedIds}
         onCommit={() => {}}
         onDelete={(ids) => {

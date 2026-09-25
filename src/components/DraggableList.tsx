@@ -169,7 +169,7 @@ export function DraggableList({
   );
 
   const endDrag = useCallback(
-    (itemId: string, pageY: number) => {
+    (itemId: string) => {
       Animated.timing(lift, { toValue: 0, duration: 120, useNativeDriver: true }).start();
       setActiveId(null);
       setScrollEnabled(true);

@@ -140,7 +140,6 @@ export function MemosScreen() {
           ...orderedGroups.map((group) => ({ id: group.id, title: group.name, acceptsDrop: true })),
         ]}
         selectedIds={selectedIds}
-        onToggle={(id) => setSelectedIds((current) => toggleId(current, id))}
         onSetSelection={setSelectedIds}
         onCommit={(ordered) => {
           ordered.forEach((entry) => {

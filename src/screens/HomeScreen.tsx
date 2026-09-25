@@ -119,7 +119,6 @@ export function HomeScreen() {
         items={boardItems}
         groups={boardGroups}
         selectedIds={selectedIds}
-        onToggle={(id) => setSelectedIds((current) => toggleId(current, id))}
         onSetSelection={setSelectedIds}
         onCommit={(ordered) => {
           ordered.forEach((entry) => {

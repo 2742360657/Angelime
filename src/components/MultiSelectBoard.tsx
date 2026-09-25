@@ -15,7 +15,6 @@ type MultiSelectBoardProps = {
   items: DragItem[];
   groups: DragGroup[];
   selectedIds: string[];
-  onToggle: (id: string) => void;
   onSetSelection: (ids: string[]) => void;
   onCommit: (ordered: Array<{ id: string; groupId: string }>) => void;
   onDelete: (ids: string[]) => void;
@@ -36,7 +35,6 @@ export function MultiSelectBoard({
   items,
   groups,
   selectedIds,
-  onToggle,
   onSetSelection,
   onCommit,
   onDelete,
