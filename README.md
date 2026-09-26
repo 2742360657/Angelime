@@ -4,6 +4,16 @@
 
 当前项目主要面向 Android 真机使用。
 
+## 下载
+
+| | |
+| --- | --- |
+| 最新版 APK | **[点击下载 angelime-release.apk](https://github.com/2742360657/Angelime/raw/main/android/app/build/outputs/apk/release/app-release.apk)** |
+| 适用平台 | Android（仅 arm64-v8a，`minSdk 24` / `targetSdk 36`） |
+| 当前版本 | `1.1.1`（versionCode 4） |
+
+下载后在手机上点击安装即可，无需自行构建。若系统提示「未知来源」，请在安装界面选择允许。
+
 ## 功能
 
 - **首页**：查看当天的待办和习惯，支持折叠、完成、撤销和快速打卡。
