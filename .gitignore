@@ -42,12 +42,14 @@ artifacts/
 ui-*.png
 
 # Android / Gradle 构建产物（android/ 本身纳入版本控制）
-/android/.gradle/
-/android/build/
-/android/app/build/
-/android/app/.cxx/
-/android/local.properties
-/android/.idea/
+android/.gradle/
+android/build/
+android/app/build/
+# 例外：只保留可直接下载安装的 release 包，其余构建产物仍然忽略
+!android/app/build/outputs/apk/release/app-release.apk
+android/app/.cxx/
+android/local.properties
+android/.idea/
 *.apk
 *.aab
 *.keystore

@@ -1,144 +1,84 @@
 # 酸橙（Angelime）
 
-基于 Expo + React Native + TypeScript 的本地待办、习惯与备忘录 App。
-数据全部保存在设备本地，可导出 JSON 备份并覆盖恢复。**仅面向 Android 真机**（无 iOS / Web 目标）。
+酸橙是一款基于 Expo、React Native 和 TypeScript 的本地效率应用，包含待办、习惯打卡和备忘录。数据默认保存在设备本地，也可以导出和恢复 JSON 备份。
 
-## 页面与交互
+当前项目主要面向 Android 真机使用。
 
-| 页面 | 说明 |
-| --- | --- |
-| 首页 | 今日待办（含逾期）与习惯打卡；两组均可折叠 |
-| 待办 | 按「逾期 / 今天 / 明天 / 未来 7 天 / 稍后 / 无日期 / 已完成」分组，各组可折叠 |
-| 习惯 | 按分组展示，支持每日 / 每周 / 每月目标、打卡、历史、归档 |
-| 备忘录 | 纯文本标题 + 正文 + 分类，支持搜索、回收站 |
-| 设置 | 个人资料、色系、归档习惯、数据备份与恢复 |
-| 回收站 | 由备忘录右侧栏进入；删除的备忘录先进这里，从这里删除才是真删除 |
+## 功能
 
-**导航**
+- **首页**：查看当天的待办和习惯，支持折叠、完成、撤销和快速打卡。
+- **待办**：支持无日期、今天、明天、自定义日期和时间；可完成、编辑、删除、批量整理和拖动排序。
+- **习惯**：支持每日、每周、每月目标，分组管理、快速打卡、历史记录、归档和恢复。
+- **备忘录**：支持标题、正文、分类、搜索、自动保存、批量移动、软删除和回收站恢复。
+- **设置**：支持个人资料、头像、主题、数据备份与恢复。
 
-- 左侧全局抽屉：屏幕左侧 60% 区域右滑唤出（首页 / 待办 / 习惯 / 备忘录 / 设置）
-- 右侧页面操作栏：屏幕右侧 40% 区域左滑唤出，内容随页面而变
-- 两个热区互不重叠，均由各自抽屉组件自带手势处理
+## 交互方式
 
-**条目操作**
-
-- 点按：打开详情 / 编辑器
-- 长按：进入多选整理态（此时条目右侧才出现拖动横线）
-- 多选态可批量移动分组与删除；待办仅支持批量删除（待办按日期分组，无自定义分组）
-- 悬浮 `+` 按钮：新建对应页面条目
-
-**折叠动画**
-
-列表条目、列表容器、折叠分组三层统一使用 Reanimated 的 `LinearTransition`；
-折叠分组的内容**保持挂载**，只切换 `height` `0 ↔ auto`（`layout` 动画只能对保持挂载的视图补间尺寸）。
-
-## 数据版本
-
-当前 `AppData.version` 为 `7`。旧版 `version: 1` 至 `version: 6` 会在读取时自动迁移：
-
-- 习惯、分组、归档状态、主题、打卡记录保持不变
-- 旧习惯默认迁移为「每天 1 次」
-- 分组与习惯按旧数组顺序生成可持久化的 `order`
-- v6 及更早的备忘录字符串 `category` 会迁移为 `memoGroups` + `groupId`
-- v6 的待办、备忘录分别补上所需字段，旧数据不丢失
-
-备份文件包含待办、习惯、分组顺序、周期设置、打卡记录、备忘录与分类、回收站、主题与个人资料。
+- 底部导航用于切换首页、待办、习惯、备忘录和设置。
+- 顶部菜单按钮或屏幕左侧右滑，可以打开当前页面的操作侧栏。
+- 首页不设置额外侧栏，保持内容页面简洁。
+- 悬浮 `+` 用于新建当前页面对应的内容。
+- 长按条目可以进入批量整理模式；整理模式支持批量移动、删除和拖动排序。
+- Android 返回键会优先关闭当前弹窗、编辑状态或侧栏；在首页连续按两次才会退出应用。
 
 ## 代码结构
 
-```
-App.tsx                      应用根：导航容器、返回键策略、退出确认
-src/
-  components/
-    AppNavigator.tsx         左侧全局抽屉导航器（React Navigation）
-    ScreenScaffold.tsx       页面脚手架：资料条 + 右侧操作栏 + 悬浮按钮
-    AccordionSection.tsx     可折叠分组
-    MultiSelectBoard.tsx     多选整理态
-    DraggableList.tsx        多选态内的拖动排序（支持跨分组）
-    …                        其余为编辑器、选择器、条目行等展示组件
-  navigation/
-    types.ts                 导航目标、抽屉菜单项、面板条目类型
-    back.ts                  系统返回键的栈式协调器
-  state/
-    HabitStore.tsx           Provider 与对外 API（useHabits）
-    storeTypes.ts            状态 / 动作 / 上下文类型与初始状态
-    habitReducer.ts          纯 reducer（无 React 依赖）
-    reducerHelpers.ts        打卡记录等纯工具函数
-  storage/habitStorage.ts    本地读写、版本迁移、备份导入导出
-  theme.ts / theme/animation.ts  色系与配色、动画配时
-  types/habit.ts             数据模型
-  utils/                     日期解析、习惯进度、待办分组
-scripts/apply-signing.mjs    prebuild 后重新应用发布签名
+```text
+App.tsx                         应用入口、导航容器、返回键和退出确认
+src/components/AppNavigator.tsx 主导航抽屉
+src/components/ScreenScaffold.tsx 页面公共结构、底部导航和页面操作栏
+src/components/FloatingAddButton.tsx 悬浮新建按钮
+src/navigation/panel.tsx        按路由保存页面操作栏内容
+src/navigation/types.ts         导航目标和页面操作项类型
+src/navigation/back.ts           Android 返回键协调器
+src/screens/                    首页、待办、习惯、备忘录、回收站和设置
+src/state/                      Provider、状态类型和纯 Reducer
+src/storage/habitStorage.ts     本地存储、版本迁移、备份导入导出
+src/utils/                      日期解析、待办分组、习惯进度等工具
+src/theme.ts                    主题和动画配置
 ```
 
-## 构建与运行
+## 环境要求
 
-环境要求：
+- Node.js `>= 20.19`
+- JDK 17
+- Android SDK Platform 36
+- Android Build Tools 36
+- Expo SDK 55
 
-| 组件 | 版本 |
-| --- | --- |
-| JDK | 17 |
-| Android SDK Platform | android-36 |
-| Android Build Tools | 36.0.0 |
-| NDK | 27.1.12297006（expo-modules-core 需要） |
-| Node.js | ≥ 20.19 |
-
-需要设置 `JAVA_HOME`、`ANDROID_HOME`，并把 `$ANDROID_HOME/platform-tools` 加入 `PATH`。
+## 安装与运行
 
 ```bash
 npm install
+npm run android
+```
 
-# 日常开发：只跑 Metro，App 通过 adb reverse 连接
+开发时可以启动 Metro，然后在已安装的 Android 应用中加载 JS：
+
+```bash
 npm start
-
-# 生成原生工程（仅在改动原生依赖或 app.json 后需要）
-npm run prebuild:android      # = expo prebuild + 重新应用发布签名
-
-# 出包
-npm run build:apk             # = gradlew assembleRelease（仅 arm64-v8a）
-# 产物：android/app/build/outputs/apk/release/app-release.apk
 ```
 
-### 发布签名
-
-keystore 与口令**存放在仓库之外**：
-
-```
-/Ciallo/Secrets/angelime/
-├── angelime-release.keystore   别名 angelime，RSA 2048，有效期 10000 天
-└── keystore.properties         storeFile / storePassword / keyAlias / keyPassword
-```
-
-`android/app/build.gradle` 的 `signingConfigs.release` 优先读取
-`~/.gradle/gradle.properties` 中的 `ANGELIME_KEYSTORE_DIR`，未配置时回退到上面的默认路径：
-
-```properties
-# ~/.gradle/gradle.properties（仅换机器时需要）
-ANGELIME_KEYSTORE_DIR=/Ciallo/Secrets/angelime/
-```
-
-> `expo prebuild` 会重新生成 `build.gradle` 覆盖签名配置，
-> 因此 prebuild 之后必须执行 `node scripts/apply-signing.mjs`（`npm run prebuild:android` 已包含）。
-
-**这个 keystore 一旦用于正式发布就不能更换，请连同口令一并异地备份。**
-证书指纹 SHA-256：`3A:8F:C2:EC:D6:FF:43:E0:B8:76:0A:0D:A1:75:4D:FC:94:8A:FC:C3:DB:A8:9F:30:30:AE:C5:11:DF:EA:AC:9A`
-
-## 校验
+生成 APK：
 
 ```bash
-npm run typecheck     # tsc --noEmit
+npm run build:apk
 ```
 
-建议同时用严格模式复查未使用的代码：
+首次生成或修改原生配置时，可以执行：
 
 ```bash
-npx tsc --noEmit --noUnusedLocals --noUnusedParameters
+npm run prebuild:android
 ```
 
-本项目没有自动化测试；每次改动后请构建 release 包并在真机确认关键流程。
+## 数据与备份
 
-## 已知限制
+应用数据保存在设备本地。设置页面中的“数据备份”会生成 JSON 文件并打开系统分享；“数据恢复”会读取备份并覆盖当前数据。
 
-- 左抽屉展开时，页面右下角的悬浮 `+` 会浮在遮罩之上（悬浮按钮渲染在页面内容层内）
-- 编辑类弹窗使用原生 `Modal`，其返回键由各弹窗的 `onRequestClose` 自行处理
-- 无 iOS / Web 目标：`app.json` 与代码中均已移除对应配置与分支
+恢复前应确认备份文件来源可靠。数据结构包含版本号，读取旧版本数据时会自动执行迁移。
+
+## 代码检查
+
+```bash
+npm run typecheck
+```

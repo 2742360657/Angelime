@@ -12,8 +12,6 @@ import { ScreenScaffold } from '../components/ScreenScaffold';
 import { TodoEditorModal } from '../components/TodoEditorModal';
 import { TodoRow } from '../components/TodoRow';
 import { UndoToast } from '../components/UndoToast';
-import { useNavigation } from '@react-navigation/native';
-import type { NavigationTarget } from '../navigation/types';
 import { useHabits } from '../state/HabitStore';
 import { TodoItem } from '../types/habit';
 import { getTodayKey } from '../utils/date';
@@ -22,7 +20,6 @@ import {
   bucketToDueDateKey,
   buildTodoBuckets,
   compareTodosSmart,
-  TODO_BUCKET_TITLES,
   todoGroupKey,
 } from '../utils/todo';
 
@@ -32,7 +29,6 @@ type UndoState =
   | null;
 
 export function TodayScreen() {
-  const navigation = useNavigation<{ navigate: (name: NavigationTarget) => void }>();
   const {
     todos,
     habits,
@@ -105,23 +101,6 @@ export function TodayScreen() {
     () => [{ id: null, label: '未分组' }, ...groups.map((group) => ({ id: group.id, label: group.name }))],
     [groups]
   );
-
-  const sidebarItems = useMemo(() => {
-    const bucketCount = (id: string) =>
-      id === 'no-date'
-        ? noDateTodos.length
-        : (allBuckets.find((bucket) => bucket.id === id)?.todos.length ?? 0);
-    return [
-      { id: 'tasks', label: '全部待办', onPress: () => navigation.navigate('tasks') },
-      ...(['overdue', 'today', 'tomorrow', 'soon', 'later', 'no-date'] as const).map((id) => ({
-        id,
-        label: `${TODO_BUCKET_TITLES[id]} · ${bucketCount(id)}`,
-        onPress: () => navigation.navigate('tasks'),
-      })),
-      { id: 'habits', label: `全部习惯 · ${habits.length}`, onPress: () => navigation.navigate('habits') },
-      { id: 'settings', label: '设置', bottom: true, onPress: () => navigation.navigate('settings') },
-    ];
-  }, [allBuckets, habits.length, noDateTodos.length, navigation]);
 
   // 今天页的多选只用于批量整理当天可见的条目。
   const todayTodoIds = useMemo(() => {
@@ -259,7 +238,7 @@ export function TodayScreen() {
     <View style={styles.screen}>
       <ScreenScaffold
       panelTitle="首页"
-      panelItems={sidebarItems}
+      panelItems={[]}
       fab={{ label: '新建待办', onPress: () => openEditor(null) }}
     >
         <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
