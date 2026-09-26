@@ -314,6 +314,7 @@ function DragHandleRow({
       <View
         accessibilityRole="adjustable"
         accessibilityLabel={`拖动 ${item.label}`}
+        hitSlop={8}
         style={[styles.handle, active && styles.handleActive]}
         {...responder.panHandlers}
       >

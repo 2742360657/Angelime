@@ -161,6 +161,7 @@ export function HomeScreen() {
           onPress: () => setArchive(true),
         },
       ]}
+      fab={{ label: '新建习惯', onPress: () => setAddHabitVisible(true) }}
     >
       <View style={styles.screen}>
         <ScrollView style={styles.scrollView} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>

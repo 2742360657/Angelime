@@ -5,6 +5,7 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-nati
 import { ArchivedHabitsModal } from '../components/ArchivedHabitsModal';
 import { ProfileEditorModal } from '../components/ProfileEditorModal';
 import { ScreenHeader } from '../components/ScreenHeader';
+import { ScreenScaffold } from '../components/ScreenScaffold';
 import { ThemeSelectionModal } from '../components/ThemeSelectionModal';
 import {
   exportBackupFile,
@@ -67,7 +68,7 @@ export function SettingsScreen() {
   };
 
   return (
-    <>
+    <ScreenScaffold panelTitle="设置" panelItems={[]} fab={null}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.content}
@@ -122,7 +123,7 @@ export function SettingsScreen() {
       <ThemeSelectionModal visible={themeVisible} onClose={() => setThemeVisible(false)} />
       <ProfileEditorModal visible={profileVisible} onClose={() => setProfileVisible(false)} />
       <ArchivedHabitsModal visible={archivedVisible} onClose={() => setArchivedVisible(false)} />
-    </>
+    </ScreenScaffold>
   );
 
   function SettingRow({
